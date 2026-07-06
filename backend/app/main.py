@@ -26,7 +26,6 @@ def compute_signal(closes: List[float]):
     sma5 = sum(closes[-5:]) / 5
     sma20 = sum(closes[-20:]) / 20
 
-    # Score in [0,1], centered at 0.5 using SMA spread
     raw = 0.5 + ((sma5 - sma20) / max(price, 1e-9)) * 8
     score = max(0.0, min(1.0, raw))
 
