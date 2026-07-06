@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install fastapi uvicorn requests
+
+      - name: Start backend
+        run: |
+          nohup python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+          sleep 8
+
+      - name: Health check
+        run: curl -f http://127.0.0.1:8000/health
+
+      - name: Signals check
+        run: curl -f "http://127.0.0.1:8000/signals?tickers=AAPL,MSFT&period=3mo"
+
+      - name: Backend log on failure
+        if: failure()
+        run: cat backend.log
