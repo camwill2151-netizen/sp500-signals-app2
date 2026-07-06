@@ -5,7 +5,7 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data
-    command: bash -c "pip install --no-cache-dir -r requirements.txt uvicorn && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    command: bash -c "pip install --no-cache-dir -r requirements.txt fastapi uvicorn && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
 
