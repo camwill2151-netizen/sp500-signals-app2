@@ -1,21 +1,24 @@
 services:
   backend:
-    image: python:3.11-slim
-    working_dir: /app
-    volumes:
-      - ./backend:/app
-      - ./data:/data
-    command: bash -c "pip install --no-cache-dir -r requirements.txt fastapi uvicorn && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   frontend:
-    image: python:3.11-slim
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-    command: bash -c "pip install --no-cache-dir -r requirements.txt streamlit requests pandas plotly && streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0"
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
       - "8501:8501"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
