@@ -19,9 +19,10 @@ docker compose restart
 ```
 
 ## Use the Makefile — never raw docker exec
+Do not run interactive `docker compose exec ... bash` sessions.
+
 | Instead of...                        | Use...              |
 |--------------------------------------|---------------------|
-| `docker compose exec backend bash`   | `make run-backend CMD="python -V"` |
 | `docker compose exec backend python -V` | `make run-backend CMD="python -V"` |
 | `docker compose up -d`               | `make up`           |
 | `docker compose logs -f`             | `make logs`         |

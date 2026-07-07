@@ -49,9 +49,11 @@ health:
 	@if printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]'; then echo "Unsafe CMD: control characters are not allowed"; exit 1; fi
 
 run-backend: .validate-cmd
+	# `sh -c "$$1" _ "$(CMD)"` runs CMD as a single positional argument.
 	$(EXEC_ONESHOT) backend sh -c "$$1" _ "$(CMD)"
 
 run-frontend: .validate-cmd
+	# `sh -c "$$1" _ "$(CMD)"` runs CMD as a single positional argument.
 	$(EXEC_ONESHOT) frontend sh -c "$$1" _ "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
