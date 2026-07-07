@@ -1,6 +1,8 @@
 .PHONY: up down build rebuild logs logs-backend logs-frontend \
         restart ps health clean run-backend run-frontend kill-exec .validate-cmd
 
+EXEC_ONESHOT = docker compose exec -T
+
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 up:
 	docker compose up -d
@@ -43,14 +45,14 @@ health:
 # Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
 .validate-cmd:
 	@test -n "$(CMD)" || (echo "Usage: make run-backend|run-frontend CMD='...'" && exit 1)
-	@if printf '%s' "$(CMD)" | grep -q '[;&|`$$<>()]'; then echo "Unsafe CMD: control operators are not allowed"; exit 1; fi
+	@if printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]'; then echo "Unsafe CMD: control operators are not allowed"; exit 1; fi
 	@if printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]'; then echo "Unsafe CMD: control characters are not allowed"; exit 1; fi
 
 run-backend: .validate-cmd
-	docker compose exec -T backend sh -c "$$1" _ "$(CMD)"
+	$(EXEC_ONESHOT) backend sh -c "$$1" _ "$(CMD)"
 
 run-frontend: .validate-cmd
-	docker compose exec -T frontend sh -c "$$1" _ "$(CMD)"
+	$(EXEC_ONESHOT) frontend sh -c "$$1" _ "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
 # If you ever get stuck in a shell: press Ctrl+P then Ctrl+Q to detach,

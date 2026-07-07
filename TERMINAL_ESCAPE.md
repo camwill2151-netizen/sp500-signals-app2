@@ -22,6 +22,7 @@ docker compose restart
 | Instead of...                        | Use...              |
 |--------------------------------------|---------------------|
 | `docker compose exec backend bash`   | `make run-backend CMD="python -V"` |
+| `docker compose exec backend python -V` | `make run-backend CMD="python -V"` |
 | `docker compose up -d`               | `make up`           |
 | `docker compose logs -f`             | `make logs`         |
 | `docker compose build --no-cache && docker compose up -d` | `make rebuild` |
