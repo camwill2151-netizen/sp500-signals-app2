@@ -1,12 +1,13 @@
-from datetime import datetime, timezone
-from typing import List
-
-import yfinance as yf
+from typing import Optional, List
+import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .models import StockSignal
+from .pipeline import build_signals_df
+from .futures_greeks import build_futures_greeks
+from .option_signal_engine import generate_option_signals
 
-app = FastAPI(title="SP500 Signals API")
-
+app = FastAPI(title="S&P 500 Signals API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,83 +16,79 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DEFAULT_TICKERS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL"]
+SIGNALS_DF = pd.DataFrame()
 
-
-def compute_signal(closes: List[float]):
-    if len(closes) < 20:
-        return "HOLD", 0.50
-
-    price = closes[-1]
-    sma5 = sum(closes[-5:]) / 5
-    sma20 = sum(closes[-20:]) / 20
-
-    raw = 0.5 + ((sma5 - sma20) / max(price, 1e-9)) * 8
-    score = max(0.0, min(1.0, raw))
-
-    if score >= 0.66:
-        action = "BUY"
-    elif score <= 0.34:
-        action = "SELL"
-    else:
-        action = "HOLD"
-    return action, round(score, 2)
-
+@app.on_event("startup")
+def startup_event():
+    global SIGNALS_DF
+    SIGNALS_DF = build_signals_df()
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
+@app.post("/refresh")
+def refresh():
+    global SIGNALS_DF
+    SIGNALS_DF = build_signals_df()
+    return {"status": "refreshed", "rows": int(len(SIGNALS_DF))}
 
-@app.get("/")
-def root():
-    return {"message": "SP500 Signals API running"}
+@app.get("/signals", response_model=List[StockSignal])
+def get_signals(signal: Optional[str] = None, sector: Optional[str] = None, ticker: Optional[str] = None, top_n: Optional[int] = 10):
+    global SIGNALS_DF
+    df = SIGNALS_DF.copy()
+
+    if ticker and "ticker" in df.columns:
+        df = df[df["ticker"].astype(str).str.upper() == ticker.upper()]
+    if signal and "signal" in df.columns:
+        df = df[df["signal"].astype(str).str.upper() == signal.upper()]
+    if sector and "sector" in df.columns:
+        df = df[df["sector"].astype(str).str.lower() == sector.lower()]
+
+    if "final_score" in df.columns:
+        df = df.sort_values("final_score", ascending=False).reset_index(drop=True)
+        df["rank"] = df.index + 1
+
+    if ticker is None and top_n is not None and top_n > 0:
+        df = df.head(int(top_n))
+
+    return df.to_dict(orient="records")
 
 
-@app.get("/signals")
-def signals(tickers: str = ",".join(DEFAULT_TICKERS), period: str = "3mo"):
-    symbols = [t.strip().upper() for t in tickers.split(",") if t.strip()]
-    now = datetime.now(timezone.utc).isoformat()
+@app.get("/futures-greeks")
+def futures_greeks(
+    tickers: str = "SPY,QQQ,IWM,DIA",
+    r: float = 0.05,
+    q: float = 0.00,
+    t_days: int = 30,
+    sigma: float = 0.20,
+):
+    ticker_list = [x.strip().upper() for x in tickers.split(",") if x.strip()]
+    T = max(t_days, 1) / 365.0
+    data = build_futures_greeks(
+        tickers=ticker_list,
+        r=r,
+        q=q,
+        T=T,
+        sigma=sigma,
+    )
+    return {"count": len(data), "rows": data}
 
-    rows = []
-    for symbol in symbols:
-        try:
-            hist = yf.Ticker(symbol).history(period=period)
-            closes = [float(x) for x in hist["Close"].dropna().tolist()]
 
-            if not closes:
-                rows.append(
-                    {
-                        "symbol": symbol,
-                        "action": "HOLD",
-                        "score": 0.50,
-                        "price": None,
-                        "timestamp": now,
-                        "error": "No price data",
-                    }
-                )
-                continue
-
-            action, score = compute_signal(closes)
-            rows.append(
-                {
-                    "symbol": symbol,
-                    "action": action,
-                    "score": score,
-                    "price": round(closes[-1], 2),
-                    "timestamp": now,
-                }
-            )
-        except Exception as e:
-            rows.append(
-                {
-                    "symbol": symbol,
-                    "action": "HOLD",
-                    "score": 0.50,
-                    "price": None,
-                    "timestamp": now,
-                    "error": str(e),
-                }
-            )
-
-    return {"count": len(rows), "signals": rows, "generated_at": now}
+@app.get("/option-signals")
+def option_signals(
+    tickers: str = "SPY,QQQ,IWM,DIA",
+    r: float = 0.05,
+    q: float = 0.00,
+    t_days: int = 30,
+    sigma: float = 0.20,
+):
+    ticker_list = [x.strip().upper() for x in tickers.split(",") if x.strip()]
+    rows = generate_option_signals(
+        tickers=ticker_list,
+        r=r,
+        q=q,
+        t_days=t_days,
+        sigma=sigma,
+    )
+    return {"count": len(rows), "rows": rows}
