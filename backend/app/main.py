@@ -113,9 +113,16 @@ def options(ticker: str = "AAPL", expiry_index: int = 0, num_strikes: int = 5):
         S = float(hist["Close"].iloc[-1])
 
         exp_dt = datetime.strptime(expiry, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        # Floor at 1 day to avoid division by zero in Black-Scholes when expiry is today
         t = max((exp_dt - datetime.now(timezone.utc)).days / 365.0, 1 / 365)
 
         chain = tk.option_chain(expiry)
+
+        def _safe_int(value) -> int:
+            """Convert a potentially NaN numeric value to int, defaulting to 0."""
+            if value is None or (isinstance(value, float) and np.isnan(value)):
+                return 0
+            return int(value)
 
         def process(df, flag):
             df = df.copy()
@@ -124,10 +131,9 @@ def options(ticker: str = "AAPL", expiry_index: int = 0, num_strikes: int = 5):
             rows = []
             for _, row in df.iterrows():
                 K = float(row["strike"])
-                iv = float(row["impliedVolatility"]) if float(row["impliedVolatility"]) > 0 else None
+                iv_raw = float(row["impliedVolatility"])
+                iv = iv_raw if iv_raw > 0 else None
                 greeks = compute_greeks_row(flag, S, K, t, r, iv) if iv else {"delta": None, "gamma": None, "theta": None, "vega": None, "rho": None}
-                vol = row["volume"]
-                oi = row["openInterest"]
                 rows.append({
                     "contract": row.get("contractSymbol", ""),
                     "type": "call" if flag == "c" else "put",
@@ -135,9 +141,9 @@ def options(ticker: str = "AAPL", expiry_index: int = 0, num_strikes: int = 5):
                     "last": round(float(row["lastPrice"]), 4),
                     "bid": round(float(row["bid"]), 4),
                     "ask": round(float(row["ask"]), 4),
-                    "impliedVolatility": round(float(row["impliedVolatility"]), 4),
-                    "volume": int(vol) if vol is not None and not (isinstance(vol, float) and np.isnan(vol)) else 0,
-                    "openInterest": int(oi) if oi is not None and not (isinstance(oi, float) and np.isnan(oi)) else 0,
+                    "impliedVolatility": round(iv_raw, 4),
+                    "volume": _safe_int(row["volume"]),
+                    "openInterest": _safe_int(row["openInterest"]),
                     **greeks,
                 })
             return rows
