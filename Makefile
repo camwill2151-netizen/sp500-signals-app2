@@ -43,17 +43,18 @@ health:
 # ── safe one-shot exec (no interactive shell, no quote trap) ──────────────────
 # Usage: make run-backend CMD="python -c 'print(1)'"
 # Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
+# `$` is intentionally blocked to prevent command/variable substitution.
 .validate-cmd:
 	@test -n "$(CMD)" || (echo "Usage: make run-backend|run-frontend CMD='...'" && exit 1)
 	@if printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]'; then echo "Unsafe CMD: control operators are not allowed"; exit 1; fi
 	@if printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]'; then echo "Unsafe CMD: control characters are not allowed"; exit 1; fi
 
 run-backend: .validate-cmd
-	# `sh -c "$$1" _ "$(CMD)"` runs CMD as a single positional argument.
+	# This positional-argument pattern avoids direct interpolation into the shell script.
 	$(EXEC_ONESHOT) backend sh -c "$$1" _ "$(CMD)"
 
 run-frontend: .validate-cmd
-	# `sh -c "$$1" _ "$(CMD)"` runs CMD as a single positional argument.
+	# This positional-argument pattern avoids direct interpolation into the shell script.
 	$(EXEC_ONESHOT) frontend sh -c "$$1" _ "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 # Terminal Escape Cheatsheet
 
 ## Stuck in an unclosed quote (`>` prompt)?
-Press `Ctrl+C` — if that doesn't work, type a closing `'` or `"` then press Enter, then Ctrl+C.
+Press `Ctrl+C` — if that doesn't work, type the matching closing quote (`'` or `"`) then press Enter, then Ctrl+C.
 
 ## Stuck inside a `docker exec` shell?
 - Type `exit` and press Enter
