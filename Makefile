@@ -40,13 +40,15 @@ health:
 
 # ── safe one-shot exec (no interactive shell, no quote trap) ──────────────────
 # Usage: make run-backend CMD="python -c 'print(1)'"
-# Note: CMD is executed via `sh -c`; use trusted local input only.
+# Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
 run-backend:
 	@test -n "$(CMD)" || (echo "Usage: make run-backend CMD='...'" && exit 1)
+	@case "$(CMD)" in *[\;\&\|\`\$\<\>]* ) echo "Unsafe CMD: control operators are not allowed"; exit 1;; esac
 	docker compose exec -T backend sh -c "$(CMD)"
 
 run-frontend:
 	@test -n "$(CMD)" || (echo "Usage: make run-frontend CMD='...'" && exit 1)
+	@case "$(CMD)" in *[\;\&\|\`\$\<\>]* ) echo "Unsafe CMD: control operators are not allowed"; exit 1;; esac
 	docker compose exec -T frontend sh -c "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
