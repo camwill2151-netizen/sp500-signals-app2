@@ -1,7 +1,7 @@
 # Terminal Escape Cheatsheet
 
 ## Stuck in an unclosed quote (`>` prompt)?
-Press `Ctrl+C` — if that doesn't work, type a closing `'` or `"` then press Enter, then Ctrl+C.
+Press `Ctrl+C` — if that doesn't work, type the matching closing quote (`'` or `"`) then press Enter, then Ctrl+C.
 
 ## Stuck inside a `docker exec` shell?
 - Type `exit` and press Enter
@@ -15,13 +15,17 @@ make kill-exec
 ```
 or manually:
 ```bash
-docker compose down && docker compose up -d
+docker compose restart
 ```
 
 ## Use the Makefile — never raw docker exec
+Do not run interactive `docker compose exec ... bash` sessions.
+
 | Instead of...                        | Use...              |
 |--------------------------------------|---------------------|
-| `docker compose exec backend bash`   | `make logs-backend` |
+| `docker compose exec backend python -V` | `make run-backend CMD="python -V"` |
 | `docker compose up -d`               | `make up`           |
 | `docker compose logs -f`             | `make logs`         |
 | `docker compose build --no-cache && docker compose up -d` | `make rebuild` |
+
+Interactive container shells are intentionally disabled here to prevent terminal lockups.

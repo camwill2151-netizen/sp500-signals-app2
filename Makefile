@@ -1,5 +1,7 @@
 .PHONY: up down build rebuild logs logs-backend logs-frontend \
-        shell-backend shell-frontend restart ps health clean run-backend run-frontend kill-exec
+        restart ps health clean run-backend run-frontend kill-exec .validate-cmd
+
+EXEC_ONESHOT = docker compose exec -T
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 up:
@@ -40,19 +42,28 @@ health:
 
 # ── safe one-shot exec (no interactive shell, no quote trap) ──────────────────
 # Usage: make run-backend CMD="python -c 'print(1)'"
-run-backend:
-	docker compose exec -T backend sh -c "$(CMD)"
+# Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
+# `$` is intentionally blocked to prevent command/variable substitution.
+.validate-cmd:
+	@test -n "$(CMD)" || (echo "Usage: make run-backend|run-frontend CMD='...'" && exit 1)
+	@if printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]'; then echo "Unsafe CMD: control operators are not allowed"; exit 1; fi
+	@if printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]'; then echo "Unsafe CMD: control characters are not allowed"; exit 1; fi
 
-run-frontend:
-	docker compose exec -T frontend sh -c "$(CMD)"
+run-backend: .validate-cmd
+	# This positional-argument pattern avoids direct interpolation into the shell script.
+	$(EXEC_ONESHOT) backend sh -c "$$1" _ "$(CMD)"
+
+run-frontend: .validate-cmd
+	# This positional-argument pattern avoids direct interpolation into the shell script.
+	$(EXEC_ONESHOT) frontend sh -c "$$1" _ "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
 # If you ever get stuck in a shell: press Ctrl+P then Ctrl+Q to detach,
 # or open a NEW terminal tab and run:  make kill-exec
 kill-exec:
-	@echo "Killing all docker exec sessions..."
-	@docker ps -q | xargs -I{} docker exec {} kill -9 1 2>/dev/null || true
-	@echo "Done. Your original terminal should now be free."
+	@echo "Restarting services to clear stuck exec sessions..."
+	@docker compose restart
+	@echo "Done. Reattach with logs/health commands as needed."
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
 clean:
