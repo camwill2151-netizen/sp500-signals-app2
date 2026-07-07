@@ -6,6 +6,7 @@ from .models import StockSignal
 from .pipeline import build_signals_df
 from .futures_greeks import build_futures_greeks
 from .option_signal_engine import generate_option_signals
+from .backtest_engine import run_backtest_multi
 
 app = FastAPI(title="S&P 500 Signals API", version="1.0.0")
 app.add_middleware(
@@ -92,3 +93,17 @@ def option_signals(
         sigma=sigma,
     )
     return {"count": len(rows), "rows": rows}
+
+
+@app.get("/backtest-signals")
+def backtest_signals(
+    tickers: str = "SPY,QQQ,IWM,DIA",
+    start_capital: float = 1000.0,
+    option_type: str = "call",
+):
+    ticker_list = [x.strip().upper() for x in tickers.split(",") if x.strip()]
+    return run_backtest_multi(
+        tickers=ticker_list,
+        start_capital=start_capital,
+        option_type=option_type
+    )

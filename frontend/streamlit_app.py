@@ -364,3 +364,53 @@ if st.button("Generate Option Signals"):
             st.dataframe(df_sig[show_cols], use_container_width=True)
     except Exception as e:
         st.error(f"Signal generation failed: {e}")
+
+
+
+st.subheader("3-Year Signal Backtest")
+
+bt_tickers = st.text_input("Backtest tickers (comma-separated)", value="SPY,QQQ,IWM,DIA")
+bt_cap = st.number_input("Starting capital per ticker ($)", min_value=100.0, max_value=1000000.0, value=1000.0, step=100.0)
+bt_opt = st.selectbox("Option type context", options=["call", "put"], index=0)
+
+if st.button("Run 3Y Backtest"):
+    try:
+        rb = requests.get(
+            f"{API_BASE}/backtest-signals",
+            params={
+                "tickers": bt_tickers,
+                "start_capital": bt_cap,
+                "option_type": bt_opt
+            },
+            timeout=90
+        )
+        rb.raise_for_status()
+        payload = rb.json()
+        results = payload.get("results", [])
+
+        if not results:
+            st.info("No backtest results returned.")
+        else:
+            import pandas as pd
+            summary_rows = []
+            for r in results:
+                summary_rows.append({
+                    "ticker": r.get("ticker"),
+                    "start_capital": r.get("start_capital"),
+                    "end_value": r.get("end_value"),
+                    "return_pct": r.get("return_pct"),
+                    "max_drawdown_pct": r.get("max_drawdown_pct"),
+                    "trade_count": r.get("trade_count"),
+                    "win_rate_pct": r.get("win_rate_pct"),
+                    "error": r.get("error")
+                })
+            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
+
+            for r in results:
+                eq = r.get("equity_curve", [])
+                if eq:
+                    dfe = pd.DataFrame(eq)
+                    st.markdown(f"**{r.get('ticker')} Equity Curve**")
+                    st.line_chart(dfe.set_index("date")["equity"])
+    except Exception as e:
+        st.error(f"Backtest failed: {e}")
