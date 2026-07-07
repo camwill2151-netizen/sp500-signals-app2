@@ -1,5 +1,5 @@
 .PHONY: up down build rebuild logs logs-backend logs-frontend \
-        restart ps health clean run-backend run-frontend kill-exec
+        restart ps health clean run-backend run-frontend kill-exec .validate-cmd
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 up:
@@ -41,14 +41,15 @@ health:
 # ── safe one-shot exec (no interactive shell, no quote trap) ──────────────────
 # Usage: make run-backend CMD="python -c 'print(1)'"
 # Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
-run-backend:
-	@test -n "$(CMD)" || (echo "Usage: make run-backend CMD='...'" && exit 1)
-	@case "$(CMD)" in *[\;\&\|\`\$\<\>]* ) echo "Unsafe CMD: control operators are not allowed"; exit 1;; esac
+.validate-cmd:
+	@test -n "$(CMD)" || (echo "Usage: make run-backend CMD='...' (or run-frontend)" && exit 1)
+	@printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]' && (echo "Unsafe CMD: control operators are not allowed"; exit 1) || true
+	@printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]' && (echo "Unsafe CMD: control characters are not allowed"; exit 1) || true
+
+run-backend: .validate-cmd
 	docker compose exec -T backend sh -c "$(CMD)"
 
-run-frontend:
-	@test -n "$(CMD)" || (echo "Usage: make run-frontend CMD='...'" && exit 1)
-	@case "$(CMD)" in *[\;\&\|\`\$\<\>]* ) echo "Unsafe CMD: control operators are not allowed"; exit 1;; esac
+run-frontend: .validate-cmd
 	docker compose exec -T frontend sh -c "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
