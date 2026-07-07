@@ -17,6 +17,8 @@ services:
       retries: 10
 
   frontend:
+    environment:
+      - COINGLASS_API_KEY=${COINGLASS_API_KEY}
     build:
       context: ./frontend
       dockerfile: Dockerfile
