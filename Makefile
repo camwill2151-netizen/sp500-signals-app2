@@ -43,14 +43,14 @@ health:
 # Blocks dangerous shell control operators (; & | ` $ < >) in CMD.
 .validate-cmd:
 	@test -n "$(CMD)" || (echo "Usage: make run-backend CMD='...' (or run-frontend)" && exit 1)
-	@printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]' && (echo "Unsafe CMD: control operators are not allowed"; exit 1) || true
-	@printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]' && (echo "Unsafe CMD: control characters are not allowed"; exit 1) || true
+	@if printf '%s' "$(CMD)" | grep -q '[;&|`$$<>]'; then echo "Unsafe CMD: control operators are not allowed"; exit 1; fi
+	@if printf '%s' "$(CMD)" | grep -q '[[:cntrl:]]'; then echo "Unsafe CMD: control characters are not allowed"; exit 1; fi
 
 run-backend: .validate-cmd
-	docker compose exec -T backend sh -c "$(CMD)"
+	docker compose exec -T backend sh -c 'exec sh -c "$$1"' _ "$(CMD)"
 
 run-frontend: .validate-cmd
-	docker compose exec -T frontend sh -c "$(CMD)"
+	docker compose exec -T frontend sh -c 'exec sh -c "$$1"' _ "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
 # If you ever get stuck in a shell: press Ctrl+P then Ctrl+Q to detach,
