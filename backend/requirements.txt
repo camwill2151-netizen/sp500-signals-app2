@@ -1,1 +1,6 @@
 yfinance
+fastapi
+uvicorn
+py_vollib
+scipy
+numpy
