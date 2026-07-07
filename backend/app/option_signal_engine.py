@@ -64,8 +64,12 @@ def _trend_score(close: pd.Series) -> Dict[str, float]:
 
 def _fundamental_score(ticker: str) -> Dict[str, float]:
     # Lightweight and robust with yfinance info fields (can be sparse)
-    t = yf.Ticker(ticker)
-    info = getattr(t, "info", {}) or {}
+    info = {}
+    try:
+        t = yf.Ticker(ticker)
+        info = getattr(t, "info", {}) or {}
+    except Exception:
+        info = {}
 
     pe = info.get("trailingPE")
     eps_g = info.get("earningsGrowth")
@@ -138,8 +142,11 @@ def generate_option_signals(
 
     by_ticker = {}
     for tk in tickers:
-        hist = yf.Ticker(tk).history(period="6mo", interval="1d")
-        if hist is None or hist.empty or "Close" not in hist:
+        try:
+            hist = yf.Ticker(tk).history(period="6mo", interval="1d")
+        except Exception:
+            hist = None
+        if hist is None or hist.empty or "Close" not in hist or hist["Close"].dropna().empty:
             by_ticker[tk] = None
         else:
             by_ticker[tk] = hist["Close"].dropna()

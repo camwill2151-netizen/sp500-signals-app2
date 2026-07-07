@@ -57,7 +57,7 @@ def run_backtest_for_ticker(
     start_capital: float = START_CAPITAL_DEFAULT,
     option_type: str = "call",
 ) -> Dict:
-    df = _safe_history(ticker, period="3y", interval="1d")
+    df = _safe_history(ticker, period="1y", interval="1d")
     if df.empty or len(df) < 80:
         return {
             "ticker": ticker,
@@ -80,7 +80,7 @@ def run_backtest_for_ticker(
 
     closes = df["Close"]
 
-    warmup = 60
+    warmup = 30
     for i in range(warmup, len(df)):
         date = str(df.index[i].date())
         px = float(closes.iloc[i])
@@ -168,8 +168,8 @@ def run_backtest_for_ticker(
         "max_drawdown_pct": round(max_dd, 2),
         "trade_count": len(trades),
         "win_rate_pct": round(win_rate, 2),
-        "trades": [asdict(t) for t in trades],
-        "equity_curve": equity_curve,
+        "trades": [asdict(t) for t in trades][-20:],
+        "equity_curve": equity_curve[-120:],
     }
 
 
