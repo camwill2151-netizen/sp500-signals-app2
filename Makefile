@@ -40,10 +40,13 @@ health:
 
 # ── safe one-shot exec (no interactive shell, no quote trap) ──────────────────
 # Usage: make run-backend CMD="python -c 'print(1)'"
+# Note: CMD is executed via `sh -c`; use trusted local input only.
 run-backend:
+	@test -n "$(CMD)" || (echo "Usage: make run-backend CMD='...'" && exit 1)
 	docker compose exec -T backend sh -c "$(CMD)"
 
 run-frontend:
+	@test -n "$(CMD)" || (echo "Usage: make run-frontend CMD='...'" && exit 1)
 	docker compose exec -T frontend sh -c "$(CMD)"
 
 # ── emergency escape ──────────────────────────────────────────────────────────
