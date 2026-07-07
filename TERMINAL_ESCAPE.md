@@ -15,7 +15,7 @@ make kill-exec
 ```
 or manually:
 ```bash
-docker compose down && docker compose up -d
+docker compose restart
 ```
 
 ## Use the Makefile — never raw docker exec

@@ -1,5 +1,5 @@
 .PHONY: up down build rebuild logs logs-backend logs-frontend \
-        shell-backend shell-frontend restart ps health clean run-backend run-frontend kill-exec
+        restart ps health clean run-backend run-frontend kill-exec
 
 # ── lifecycle ─────────────────────────────────────────────────────────────────
 up:
@@ -50,9 +50,9 @@ run-frontend:
 # If you ever get stuck in a shell: press Ctrl+P then Ctrl+Q to detach,
 # or open a NEW terminal tab and run:  make kill-exec
 kill-exec:
-	@echo "Killing all docker exec sessions..."
-	@docker ps -q | xargs -I{} docker exec {} kill -9 1 2>/dev/null || true
-	@echo "Done. Your original terminal should now be free."
+	@echo "Restarting services to clear stuck exec sessions..."
+	@docker compose restart
+	@echo "Done. Reattach with logs/health commands as needed."
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
 clean:
