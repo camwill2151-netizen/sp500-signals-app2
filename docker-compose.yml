@@ -8,6 +8,8 @@ services:
     volumes:
       - ./data:/data
     restart: unless-stopped
+    stdin_open: false
+    tty: false
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -21,6 +23,10 @@ services:
     ports:
       - "8501:8501"
     restart: unless-stopped
+    stdin_open: false
+    tty: false
+    environment:
+      - API_BASE_URL=http://backend:8000
     depends_on:
       backend:
         condition: service_healthy
